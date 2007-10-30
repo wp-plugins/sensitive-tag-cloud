@@ -5,13 +5,13 @@ Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets
 Stable tag: trunk
 Requires at least: 2.3
 Tested up to: 2.3
-Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 
 This wordpress plugin provides a tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category.
 
 == Description ==
 
 This wordpress plugin provides a tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category.
+http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 
 == Installation ==
 
