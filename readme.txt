@@ -2,6 +2,7 @@
 Contributors: reneade
 Donate link: http://www.rene-ade.de/inhalte/danke.html
 Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets
+Stable tag: trunk
 Requires at least: 2.3
 Tested up to: 2.3
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
