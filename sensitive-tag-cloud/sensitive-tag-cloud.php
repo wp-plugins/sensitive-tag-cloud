@@ -2,13 +2,37 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 0.3
+Version: 0.4
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category.
 Author: Ren&eacute; Ade
 Author URI: http://www.rene-ade.de
 Min WP Version: 2.3
 */
+//-----------------------------------------------------------------------------
+
+// wordpress mu only: get term children (not included in wordpress mu 1.3)
+if( !function_exists('get_term_children') ) {
+  function get_term_children( $term, $taxonomy ) {
+   if ( ! is_taxonomy($taxonomy) )
+    return new WP_Error('invalid_taxonomy', __('Invalid Taxonomy'));
+  
+   $terms = _get_term_hierarchy($taxonomy);
+  
+   if ( ! isset($terms[$term]) )
+    return array();
+  
+   $children = $terms[$term];
+  
+   foreach ( $terms[$term] as $child ) {
+    if ( isset($terms[$child]) )
+    	$children = array_merge($children, get_term_children($child, $taxonomy));
+   }
+  
+   return $children;
+  }
+}
+
 //-----------------------------------------------------------------------------
 
 // word cloud
