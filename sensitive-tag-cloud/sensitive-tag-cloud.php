@@ -26,7 +26,7 @@ if( !function_exists('get_term_children') ) {
   
    foreach ( $terms[$term] as $child ) {
     if ( isset($terms[$child]) )
-    	$children = array_merge($children, get_term_children($child, $taxonomy));
+      $children = array_merge($children, get_term_children($child, $taxonomy));
    }
   
    return $children;
