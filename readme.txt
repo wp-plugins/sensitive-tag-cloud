@@ -19,3 +19,5 @@ Plugin Website: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagclou
 1. Upload the folder 'sensitive-tag-cloud' with all files to '/wp-content/plugins' on your webserver
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Add the widget "sensitive tag cloud" to your sidebar and configure it as you like
+
+German ScreenShots: sensitive-tag-cloud_install_de.jpg
