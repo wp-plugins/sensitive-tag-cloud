@@ -2,9 +2,9 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 0.4
+Version: 0.5
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
-Description: This wordpress plugin provides a tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category.
+Description: This wordpress plugin provides a configurable tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category. The style and size of the tagcloud can be configured.
 Author: Ren&eacute; Ade
 Author URI: http://www.rene-ade.de
 Min WP Version: 2.3
@@ -35,16 +35,29 @@ if( !function_exists('get_term_children') ) {
 
 //-----------------------------------------------------------------------------
 
-// word cloud
+// sort tags
+function stc_tagsort( $a, $b ) {
+  if( $a->count > $b->count )
+    return 1;
+  if( $a->count < $b->count )
+    return -1;        
+  return 0;    
+}
+
+// get tags
 function stc_get_tags( $args = '' ) {
   $defaults = array(
     'orderby' => 'name', 'order' => 'ASC',
     'exclude' => '', 'include' => '',
-    'category' => -1, 'categories' => -1
+    'category' => -1, 'categories' => -1,
+    'number' => 45
   );
   $args = wp_parse_args( $args, $defaults );
   extract($args); 
-      
+          
+  // options
+  $options = get_option('stc_widget');
+  
   // get categorys
   $categories_array = array();  
   if( $categories!=-1 ) {
@@ -65,7 +78,6 @@ function stc_get_tags( $args = '' ) {
   
   // get tags
   $tags = array();
-  $args_gettags = array_merge( $args, array('orderby' => 'count', 'order' => 'DESC') );
   global $stc_filter_query_onlyid_active;
   foreach( $categories_array as $categories_element ) {  
     if( $categories_element==0 ) {
@@ -76,11 +88,21 @@ function stc_get_tags( $args = '' ) {
       $posts_array = get_posts( array('category'=>$categories_element,'numberposts'=>-1) );
       $stc_filter_query_onlyid_active = false;
       foreach( $posts_array as $post ) {  
-        $tags = array_merge( $tags, wp_get_post_tags($post->ID,$args_gettags) );
+        $posttags = wp_get_post_tags( $post->ID, $args );
+        foreach( $posttags as $posttag )
+          $tags[$posttag->name] = $posttag;
       }
     }
   }
 
+  // order and cut
+  if( isset($options['args']['number']) && count($tags)>$options['args']['number'] ) {
+    usort( $tags, 'stc_tagsort' );
+    $tags = array_reverse( $tags );
+    $tags = array_chunk( $tags, $options['args']['number'] );    
+    $tags = $tags[0];
+  }
+  
   // return
   return $tags;
 }
@@ -122,7 +144,8 @@ function stc_widget($args) {
     return; // dont show empty widget
   
   // cloud
-  $cloud = wp_generate_tag_cloud( $tags, $args );
+  $cloud_args = array_merge( $args, $options['args'] ); 
+  $cloud = wp_generate_tag_cloud( $tags, $cloud_args );
   if( is_wp_error($cloud) )
     return;
   $cloud = apply_filters( 'wp_tag_cloud', $cloud, $args );  
@@ -138,6 +161,16 @@ function stc_widget($args) {
 function stc_widget_control() {
   $options = $newoptions = get_option('stc_widget');
 
+  // define args
+  $argkeys = array( 'smallest'=>0, // number
+                    'largest'=>0, // number
+                    'unit'=>array('pt'), // options
+                    'number'=>0, // number
+                    'format'=>array('flat','list'), // options
+                    'orderby'=>array('name','count'), // options
+                    'order'=>array('ASC','DESC') // options
+  );
+    
   // get options
   if ( $_POST['stc-widget-submit'] ) {
     $newoptions['title']            = strip_tags(stripslashes($_POST['stc-widget-title']));
@@ -148,8 +181,20 @@ function stc_widget_control() {
     $newoptions['showinchildcats']  = isset($_POST['stc-widget-showinchildcats']);
     $newoptions['activateperformancehacks'] 
       = isset($_POST['stc-widget-activateperformancehacks']);
+      
+    // get args      
+    foreach( $argkeys as $argkey=>$type ) {
+      if( is_string($type) )
+        $newoptions['args'][$argkey] = $_POST['stc-widget-args-'.$argkey];
+      if( is_int($type) )
+        $newoptions['args'][$argkey] = is_numeric($_POST['stc-widget-args-'.$argkey]) ?
+                                         (int) $_POST['stc-widget-args-'.$argkey] : $type;
+      if( is_array($type) )
+        $newoptions['args'][$argkey] = in_array($_POST['stc-widget-args-'.$argkey],$type) ? 
+                                         $_POST['stc-widget-args-'.$argkey] : $type[0];
+    }
   }
-
+  
   // update options if needed
   if ( $options != $newoptions ) {
     $options = $newoptions;
@@ -157,17 +202,16 @@ function stc_widget_control() {
   }
   
   // checkboxes
-  $title            = attribute_escape( $options['title'] );
   $showchildcattags = $options['showchildcattags'] ? 'checked="checked"' : '';
   $showalways       = $options['showalways']       ? 'checked="checked"' : '';
   $showinparentcats = $options['showinparentcats'] ? 'checked="checked"' : '';
   $showinchildcats  = $options['showinchildcats']  ? 'checked="checked"' : '';
   $activateperformancehacks 
     = $options['activateperformancehacks']  ? 'checked="checked"' : '';
-
+  
   // form
   echo '<p><label for="stc-widget-title">'._e('Title:');
-  echo '<input type="text" style="width:300px" id="stc-widget-title" name="stc-widget-title" value="'.$title.'" /></label>';
+  echo '<input type="text" style="width:300px" id="stc-widget-title" name="stc-widget-title" value="'.attribute_escape( $options['title'] ).'" /></label>';
   echo '</p>';
   echo '<p><label for="stc-widget-options">'._e('Display:');
   echo '<input type="checkbox" class="checkbox" id="stc-widget-showchildcattags" name="stc-widget-showchildcattags" '.$showchildcattags.' />'._e( 'Show also tags of subcategories' ).'<br />';  
@@ -175,6 +219,21 @@ function stc_widget_control() {
   echo '<input type="checkbox" class="checkbox" id="stc-widget-showinparentcats" name="stc-widget-showinparentcats" '.$showinparentcats.' />'._e( 'Show in categories with subcategories' ).'<br />';
   echo '<input type="checkbox" class="checkbox" id="stc-widget-showinchildcats" name="stc-widget-showinchildcats" '.$showinchildcats.' />'._e( 'Show in categories without subcategories' ).'<br />';
   echo '</p>';
+  echo '<p><label for="stc-widget-options">'._e('Style:');
+  foreach( $argkeys as $argkey=>$values ) {
+    echo _e( $argkey ).' ';
+    if( is_int($values) || is_string($values) )
+      echo '<input type="text" style="width:150px" id="stc-widget-args-'.$argkey.'" name="stc-widget-args-'.$argkey.'" value="'.$options['args'][$argkey].'" /></label>';
+    if( is_array($values) ) {
+      echo '<select id="stc-widget-args-'.$argkey.'" name="stc-widget-args-'.$argkey.'">';
+      foreach( $values as $value ) {
+        echo '<option '.($value==$options['args'][$argkey]?'selected':'').'>'.$value.'</option>';      
+      }
+      echo '</select>';
+    }
+    echo '<br />';
+  }
+  echo '</p>';  
   echo '<p><label for="stc-widget-options">'._e('Troubleshooting:');
   echo '<input type="checkbox" class="checkbox" id="stc-widget-activateperformancehacks" name="stc-widget-activateperformancehacks" '.$activateperformancehacks.' />'._e( 'Activate Performance Hacks' ).'<br />';
   echo '</p>';  
@@ -205,8 +264,13 @@ function stc_filter_query_onlyid( $query )
     
 // (de)activation
 function stc_activate() {
+  $defaultargs = array(
+    'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 45,
+    'format' => 'flat', 'orderby' => 'name', 'order' => 'ASC'
+  );
   $options = array( 
     'title'            => __('Tags'), 
+    'args'             => $defaultargs,
     'showchildcattags' => true,
     'showalways'       => false, 
     'showinparentcats' => true, 
