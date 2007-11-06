@@ -6,11 +6,12 @@ Stable tag: trunk
 Requires at least: 2.3
 Tested up to: 2.3
 
-This wordpress plugin provides a tagcloud that shows tags depending of the current context (e.g. Category) only. 
+This wordpress plugin provides a tagcloud that shows tags depending of the current context (e.g. Category) only. The style and sizes are configurable.
 
 == Description ==
 
-This wordpress plugin provides a tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category.
+This wordpress plugin provides a configurable tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category.
+The style and sizes of the tagcloud can be configured.
 
 Plugin Website: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 
