@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 0.5
+Version: 0.6
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a configurable tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category. The style and size of the tagcloud can be configured.
 Author: Ren&eacute; Ade
@@ -84,7 +84,7 @@ function stc_get_tags( $args = '' ) {
       $tags = array_merge( $tags, get_tags($args_gettags) );
     }
     else {
-      $stc_filter_query_onlyid_active = true; // get only the ids, dont load all post fields
+      $stc_filter_query_onlyid_active = true && $options['activateperformancehacks']; // get only the ids, dont load all post fields
       $posts_array = get_posts( array('category'=>$categories_element,'numberposts'=>-1) );
       $stc_filter_query_onlyid_active = false;
       foreach( $posts_array as $post ) {  
@@ -117,7 +117,7 @@ function stc_widget($args) {
   $options = get_option('stc_widget');
   
   // environment
-  $category             = get_query_var('cat');
+  $category             = get_query_var('cat'); // current category
   $category_haschildren = count(get_term_children($category,'category'))>0;  
   
   // show
@@ -144,8 +144,11 @@ function stc_widget($args) {
     return; // dont show empty widget
   
   // cloud
+  global $stc_filter_tag_link_active;
   $cloud_args = array_merge( $args, $options['args'] ); 
+  $stc_filter_tag_link_active = true && $options['sensitivetaglinks'];
   $cloud = wp_generate_tag_cloud( $tags, $cloud_args );
+  $stc_filter_tag_link_active = false;
   if( is_wp_error($cloud) )
     return;
   $cloud = apply_filters( 'wp_tag_cloud', $cloud, $args );  
@@ -173,12 +176,15 @@ function stc_widget_control() {
     
   // get options
   if ( $_POST['stc-widget-submit'] ) {
-    $newoptions['title']            = strip_tags(stripslashes($_POST['stc-widget-title']));
-    $newoptions['showchildcattags'] = isset($_POST['stc-widget-showchildcattags']);        
-    $newoptions['showalways']       = isset($_POST['stc-widget-showalways']);    
-    $newoptions['showinparentcats'] = isset($_POST['stc-widget-showinparentcats']);   
-    $newoptions['showinchildcats']  = isset($_POST['stc-widget-showinchildcats']);
-    $newoptions['showinchildcats']  = isset($_POST['stc-widget-showinchildcats']);
+    $newoptions['title']             = strip_tags(stripslashes($_POST['stc-widget-title']));
+    
+    // checkboxes
+    $newoptions['showchildcattags']  = isset($_POST['stc-widget-showchildcattags']);        
+    $newoptions['showalways']        = isset($_POST['stc-widget-showalways']);    
+    $newoptions['showinparentcats']  = isset($_POST['stc-widget-showinparentcats']);   
+    $newoptions['showinchildcats']   = isset($_POST['stc-widget-showinchildcats']);
+    $newoptions['showinchildcats']   = isset($_POST['stc-widget-showinchildcats']);
+    $newoptions['sensitivetaglinks'] = isset($_POST['stc-widget-sensitivetaglinks']);
     $newoptions['activateperformancehacks'] 
       = isset($_POST['stc-widget-activateperformancehacks']);
       
@@ -202,10 +208,11 @@ function stc_widget_control() {
   }
   
   // checkboxes
-  $showchildcattags = $options['showchildcattags'] ? 'checked="checked"' : '';
-  $showalways       = $options['showalways']       ? 'checked="checked"' : '';
-  $showinparentcats = $options['showinparentcats'] ? 'checked="checked"' : '';
-  $showinchildcats  = $options['showinchildcats']  ? 'checked="checked"' : '';
+  $showchildcattags  = $options['showchildcattags']  ? 'checked="checked"' : '';
+  $showalways        = $options['showalways']        ? 'checked="checked"' : '';
+  $showinparentcats  = $options['showinparentcats']  ? 'checked="checked"' : '';
+  $showinchildcats   = $options['showinchildcats']   ? 'checked="checked"' : '';
+  $sensitivetaglinks = $options['sensitivetaglinks'] ? 'checked="checked"' : ''; 
   $activateperformancehacks 
     = $options['activateperformancehacks']  ? 'checked="checked"' : '';
   
@@ -219,6 +226,9 @@ function stc_widget_control() {
   echo '<input type="checkbox" class="checkbox" id="stc-widget-showinparentcats" name="stc-widget-showinparentcats" '.$showinparentcats.' />'._e( 'Show in categories with subcategories' ).'<br />';
   echo '<input type="checkbox" class="checkbox" id="stc-widget-showinchildcats" name="stc-widget-showinchildcats" '.$showinchildcats.' />'._e( 'Show in categories without subcategories' ).'<br />';
   echo '</p>';
+  echo '<p><label for="stc-widget-options">'._e('Links:');
+  echo '<input type="checkbox" class="checkbox" id="stc-widget-sensitivetaglinks" name="stc-widget-sensitivetaglinks" '.$sensitivetaglinks.' />'._e( 'Restricted to current context' ).' (experimental)'.'<br />';    
+  echo '</p>';  
   echo '<p><label for="stc-widget-options">'._e('Style:');
   foreach( $argkeys as $argkey=>$values ) {
     echo _e( $argkey ).' ';
@@ -242,15 +252,10 @@ function stc_widget_control() {
 
 //-----------------------------------------------------------------------------
 
-// filter
-function stc_filter_query_onlyid( $query )
-{
+// filter query
+function stc_filter_query_onlyid( $query ) {
   global $stc_filter_query_onlyid_active;
-  if( $stc_filter_query_onlyid_active!==true )
-    return $query;
-    
-  $options = get_option('stc_widget');
-  if( !$options['activateperformancehacks'] )
+  if( !$stc_filter_query_onlyid_active )
     return $query;
       
   // we need only the ids of the posts, dont load all fields
@@ -258,6 +263,53 @@ function stc_filter_query_onlyid( $query )
   return str_replace( "SELECT DISTINCT * FROM $wpdb->posts", 
                       "SELECT DISTINCT $wpdb->posts.ID FROM $wpdb->posts", 
                       $query );
+}
+
+//-----------------------------------------------------------------------------
+
+// get tag link
+function stc_get_tag_link( $term_ids ) {
+	global $wp_rewrite;
+	$taglink = $wp_rewrite->get_tag_permastruct();
+
+  $term_slugs = array();
+  foreach( $term_ids as $term_id=>$term_taxonomy ) {
+  	$term = &get_term( $term_id, $term_taxonomy );
+  	if ( is_wp_error( $term ) )
+  		return $term;
+  	$term_slugs[$term_id] = $term->slug;
+  }
+  
+	if ( empty($taglink) ) {
+		$file = get_option('home') . '/';
+		$taglink = $file . '?tag=' . implode( '+', $term_slugs );
+	} else {
+		$taglink = str_replace('%tag%', implode('+',$term_slugs), $taglink);
+		$taglink = get_option('home') . user_trailingslashit($taglink, 'category');
+	}
+  
+  return apply_filters('tag_link', $taglink, $tag_id);  
+}
+
+// filter tag link
+function stc_filter_tag_link( $taglink, $tag_id ) {
+  global $stc_filter_tag_link_active;
+  if( !$stc_filter_tag_link_active )
+    return $taglink;
+  
+  // get current
+  $category = get_query_var('cat'); // current category
+  
+  if( !empty($category) ) { 
+    $stc_filter_tag_link_active = false; // no loop, we are currently doing this
+    $taglink = stc_get_tag_link( array( // add category to tag link
+      $category=>'category',
+      $tag_id=>'post_tag'
+    ) );
+    $stc_filter_tag_link_active = true; // reset
+  }
+    
+  return $taglink;
 }
 
 //-----------------------------------------------------------------------------
@@ -269,12 +321,13 @@ function stc_activate() {
     'format' => 'flat', 'orderby' => 'name', 'order' => 'ASC'
   );
   $options = array( 
-    'title'            => __('Tags'), 
-    'args'             => $defaultargs,
-    'showchildcattags' => true,
-    'showalways'       => false, 
-    'showinparentcats' => true, 
-    'showinchildcats'  => true,
+    'title'             => __('Tags'), 
+    'args'              => $defaultargs,
+    'showchildcattags'  => true,
+    'showalways'        => false, 
+    'showinparentcats'  => true, 
+    'showinchildcats'   => true,
+    'sensitivetaglinks' => false,
     'activateperformancehacks' => false
   );
   add_option( 'stc_widget', $options );
@@ -285,9 +338,17 @@ function stc_deactivate() {
 
 // initialization
 function stc_init() {  
+
+  // register widget
   $class['classname'] = 'stc_widget';
   wp_register_sidebar_widget('sensitive_tag_cloud', __('Sensitive Tag Cloud'), 'stc_widget', $class);
   wp_register_widget_control('sensitive_tag_cloud', __('Sensitive Tag Cloud'), 'stc_widget_control', 'width=300&height=160');
+  
+  // init globals
+  global $stc_filter_query_onlyid_active;
+  global $stc_filter_tag_link_active;  
+  $stc_filter_query_onlyid_active = false;
+  $stc_filter_tag_link_active     = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -298,7 +359,8 @@ add_action( 'deactivate_'.plugin_basename(__FILE__), 'stc_deactivate' );
 add_action( 'init', 'stc_init');
 
 // filters
-add_filter( 'query', 'stc_filter_query_onlyid' ); // a filter for fields queried in post/get_posts() only would be better
+add_filter( 'query', 'stc_filter_query_onlyid', 9 ); // a filter for fields queried in post/get_posts() only would be better
+add_filter( 'tag_link', 'stc_filter_tag_link', 5, 2 ); // extend tag links
 
 //-----------------------------------------------------------------------------
 
