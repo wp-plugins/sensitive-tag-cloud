@@ -1,19 +1,23 @@
 === SensitiveTagCloud ===
 Contributors: reneade
-Donate link: http://www.rene-ade.de/inhalte/danke.html
+Donate link: http://www.rene-ade.de/stichwoerter/spenden
 Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets
 Stable tag: trunk
 Requires at least: 2.3
-Tested up to: 2.3
+Tested up to: 2.3.1
 
-This wordpress plugin provides a tagcloud that shows tags depending of the current context (e.g. Category) only. The style and sizes are configurable.
+This wordpress plugin provides a tagcloud that shows tags depending of the current context (e.g. Category, Author, Tag, Post) only. The style and sizes are configurable. The tag-links of the cloud can be restricted to the current category or current selected tag.
 
 == Description ==
 
-This wordpress plugin provides a configurable tagcloud that shows tags depending of the current context only. For example it is possible to let the tagcloud show only tags that really occur in the current category (and if desired subcategories). The widget can get configured to be only visible on pages that really show a category.
-The style and sizes of the tagcloud can be configured.
+This wordpress plugin provides a configurable tagcloud that shows tags depending of the current context only. 
+For example the tagcloud shows only tags that really occur in the current category, within the current date-, author-, tag- archive or your search results. 
+And the widget can be configured to be only visible if viewing a tag archive, category, a sinlge post or even only if viewing the searchresults for example. 
+It is also possible to restrict the links of the tag cloud to the current viewing tag archive or category: If you click on the tag "test1" within the tag cloud of the tag archive of "test2" the target page will only contain posts that have both tags.
+Of course, the style and sizes of the tagcloud can be configured.
 
 Plugin Website: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
+Comments are welcome! And of course, I also like presents of my Amazone-Wishlist or paypal donations to finance my website. :-)
 
 == Installation ==
 
