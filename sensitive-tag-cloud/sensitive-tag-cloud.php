@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 0.8
+Version: 0.8.1
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a highly configurable tagcloud that shows tags depending of the current context.
 Author: Ren&eacute; Ade
@@ -40,10 +40,11 @@ if( !function_exists('get_term_children') ) {
 //-----------------------------------------------------------------------------
 
 // check display conditions
-function stc_widget_display_allowed() {
+function stc_widget_display_allowed( $options=null ) {
 
   // options
-  $options = get_option( 'stc_widget' ); // get options
+  if( !$options )
+    $options = get_option( 'stc_widget' ); // get options
 
   // check if conditions are active
   if( $options['display'][null] ) // conditions inactive
@@ -64,10 +65,11 @@ function stc_widget_display_allowed() {
 //-----------------------------------------------------------------------------
 
 // get posts
-function stc_get_posts() {
+function stc_get_posts( $options=null ) {
 
   // options
-  $options = get_option( 'stc_widget' ); // get options
+  if( !$options )
+    $options = get_option( 'stc_widget' ); // get options
   
   // query vars
   global $wp_the_query; // current query
@@ -120,7 +122,7 @@ function stc_widget( $args ) {
   $options = get_option( 'stc_widget' ); // get options
   
   // get current posts
-  $posts = stc_get_posts();
+  $posts = stc_get_posts( $options );
 
   // get tags
   $tags = array();
@@ -347,7 +349,7 @@ function stc_get_tag_link( $slugs_and ) {
 }
 
 // get current slugs
-function stc_filter_tag_link_get_slugs() {
+function stc_filter_tag_link_get_slugs( $options=null ) {
 
   // use cached values if possible
   global $stc_filter_tag_link_get_slugs_cache;
@@ -360,7 +362,8 @@ function stc_filter_tag_link_get_slugs() {
   );
   
   // options
-  $options = get_option( 'stc_widget' ); // get options
+  if( !$options )
+    $options = get_option( 'stc_widget' ); // get options
       
   // get last slugs
   $stc_filter_tag_link_get_slugs_cache['slugs_and'] = 
@@ -415,7 +418,7 @@ function stc_filter_tag_link( $taglink, $tag_id ) {
     return $taglink;
     
   // get current slugs
-  $slugs = stc_filter_tag_link_get_slugs(); // get all restriction slugs
+  $slugs = stc_filter_tag_link_get_slugs( $options ); // get all restriction slugs
       
   // get tag slug by id
   $tag_term = &get_term( $tag_id, 'post_tag' );
@@ -494,7 +497,7 @@ function stc_init() {
   // register widget
   $class['classname'] = 'stc_widget';
   wp_register_sidebar_widget('sensitive_tag_cloud', __('Sensitive Tag Cloud'), 'stc_widget', $class);
-  wp_register_widget_control('sensitive_tag_cloud', __('Sensitive Tag Cloud'), 'stc_widget_control', 'width=300&height=160');
+  wp_register_widget_control('sensitive_tag_cloud', __('Sensitive Tag Cloud'), 'stc_widget_control', 'width=300&height=800');
   
   // init globals
   global $stc_filter_query_onlyminimum_active; // performance hack
