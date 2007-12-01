@@ -111,7 +111,7 @@ function stc_widget( $args ) {
   // comment // if you dont like this comment, you may remove it :-(
   echo '<!-- ';
   echo 'WordPress Plugin SensitiveTagCloud by René Ade';
-  echo ' -- ';
+  echo ' - ';
   echo 'http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html';
   echo ' -->';
 
