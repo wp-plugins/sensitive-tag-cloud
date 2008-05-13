@@ -1,10 +1,9 @@
 === SensitiveTagCloud ===
 Contributors: reneade
 Donate link: http://www.rene-ade.de/stichwoerter/spenden
-Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets
+Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets, links
 Stable tag: trunk
 Requires at least: 2.3
-Tested up to: 2.3.1
 
 This wordpress plugin provides a tagcloud that shows tags depending of the current context (e.g. Category, Author, Tag, Post) only. The style and sizes are configurable. The tag-links of the cloud can be restricted to the current category or current selected tag.
 
@@ -17,7 +16,7 @@ It is also possible to restrict the links of the tag cloud to the current viewin
 Of course, the style and sizes of the tagcloud can be configured.
 
 Plugin Website: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
-Comments are welcome! And of course, I also like presents of my Amazone-Wishlist or paypal donations to finance my website. :-)
+Comments are welcome! And of course, I also like presents of my Amazon-Wishlist or paypal donations to finance my website. :-)
 
 == Installation ==
 
