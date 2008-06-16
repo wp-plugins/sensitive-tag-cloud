@@ -29,9 +29,9 @@ German ScreenShots: sensitive-tag-cloud_install_de.jpg
 IF YOUR THEME DOES NOT SUPPORT SIDEBAR WIDGETS:
 - Use the page "SensitiveTagCloud" under the "Presentation"/"Themes"-menu of your admin panel to configure the SensitiveTagCloud 
 - Add the following code to your template file where you like to output the SensitiveTagCloud:
-  ' 
+  `
   <?php 
     if( function_exists("stc_widget") )
       stc_widget(); 
   ?> 
-  '
+  `
