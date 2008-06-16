@@ -1,7 +1,7 @@
 === SensitiveTagCloud ===
 Contributors: reneade
 Donate link: http://www.rene-ade.de/stichwoerter/spenden
-Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets, links
+Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets, links, tag, tagcloud, sensitive, condition, stc
 Stable tag: trunk
 Requires at least: 2.3
 
@@ -16,7 +16,7 @@ It is also possible to restrict the links of the tag cloud to the current viewin
 Of course, the style and sizes of the tagcloud can be configured.
 
 Plugin Website: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
-Comments are welcome! And of course, I also like presents of my Amazon-Wishlist or paypal donations to finance my website. :-)
+Comments are welcome! And of course, I also like presents of my Amazon-Wishlist (http://www.rene-ade.de/inhalte/amazon-wunschliste.html) or paypal donations (http://www.rene-ade.de/inhalte/paypal-spende.html). :-)
 
 == Installation ==
 
@@ -25,3 +25,13 @@ Comments are welcome! And of course, I also like presents of my Amazon-Wishlist 
 3. Add the widget "sensitive tag cloud" to your sidebar and configure it as you like
 
 German ScreenShots: sensitive-tag-cloud_install_de.jpg
+
+IF YOUR THEME DOES NOT SUPPORT SIDEBAR WIDGETS:
+- Use the page "SensitiveTagCloud" under the "Presentation"/"Themes"-menu of your admin panel to configure the SensitiveTagCloud 
+- Add the following code to your template file where you like to output the SensitiveTagCloud:
+  ' 
+  <?php 
+    if( function_exists("stc_widget") )
+      stc_widget(); 
+  ?> 
+  '
