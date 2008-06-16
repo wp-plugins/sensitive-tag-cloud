@@ -282,7 +282,7 @@ function stc_admin_output() {
   }
   
   // display form
-  echo '<p>'.'<h3>'.'Title'.'</h3>';
+  echo '<p>'.'<h3>'.'Title'.' (Sidebar only)'.'</h3>';
     echo '<input type="text" style="width:300px" id="stc-widget-title" name="stc-widget-title" value="'.attribute_escape($options['title']).'" />'.'<br />';
   echo '</p>';
   echo '<p>'.'<h3>'.'Display'.'</h3>';
@@ -350,7 +350,7 @@ function stc_admin() {
     echo '<div class="controlform">';
       echo '<form method="post">';
         stc_admin_output();
-        echo '<input type="submit">';
+        echo '<input type="submit" value="Save settings">';
       echo '</form>';
     echo '</div>';
   echo '</div>';
