@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 0.8.2
+Version: 0.9
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a highly configurable tagcloud that shows tags depending of the current context.
 Author: Ren&eacute; Ade
@@ -102,7 +102,7 @@ function stc_get_posts( $options=null ) {
 //-----------------------------------------------------------------------------
 
 // the tagcloud widget
-function stc_widget( $args ) {
+function stc_widget( $args=null ) {
 
   // check display conditions
   if( !stc_widget_display_allowed() )
@@ -110,12 +110,17 @@ function stc_widget( $args ) {
 
   // comment // if you dont like this comment, you may remove it :-(
   echo '<!-- ';
-  echo 'WordPress Plugin SensitiveTagCloud by René Ade';
+  echo 'WordPress Plugin SensitiveTagCloud by Rene Ade';
   echo ' - ';
   echo 'http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html';
   echo ' -->';
 
   // args
+  $sidebaroutput = true;
+  if( !$args ) {
+    $args = array();
+    $sidebaroutput = false;
+  }
   extract( $args ); // extract args
  
   // options
@@ -180,11 +185,15 @@ function stc_widget( $args ) {
   $cloud = apply_filters( 'wp_tag_cloud', $cloud, $args ); // apply cloud filter
    
   // output
-  echo $before_widget;
-  echo $before_title . $options['title'] . $after_title;
-  echo $cloud;
-  echo $after_widget;
-  
+  if( $sidebaroutput ) {
+    echo $before_widget;
+    echo $before_title . $options['title'] . $after_title;
+    echo $cloud;
+    echo $after_widget;
+  }
+  else
+    echo $cloud;
+      
   // tagcloud completed
   return;
 }
@@ -193,6 +202,12 @@ function stc_widget( $args ) {
 
 // widget configuration
 function stc_widget_control() {
+  echo '<a href="themes.php?page=sensitivetagcloud" target="_blank">';
+    echo 'Open Configuration Menu';
+  echo '</a>';
+}
+
+function stc_admin_output() {
 
   // options
   $options = $newoptions = get_option('stc_widget'); // get options
@@ -207,9 +222,18 @@ function stc_widget_control() {
     'orderby'=>array('name','count'), // options
     'order'=>array('ASC','DESC') // options
   );
+  $argdescrs = array( 
+    'smallest'=>'Smalles size',
+    'largest'=>'Largest size',
+    'unit'=>'Size unit',
+    'number'=>'Max number of tags',
+    'format'=>'Format',
+    'orderby'=>'Order by',
+    'order'=>'Order'
+  );
   // define display conditions
   $displayconditions = array( 
-    // 'is_home'     => 'Show on home page (all tags)', not working
+    'is_home'     => 'Show on home page (all tags) (WP2.5)',
     'is_page'     => 'Show on pages (all tags)',
     'is_single'   => 'Show on post pages (tags of post)',
     'is_search'   => 'Show on search page (tags of posts)',
@@ -258,28 +282,36 @@ function stc_widget_control() {
   }
   
   // display form
-  echo '<p>'._e('Title');
+  echo '<p>'.'<h3>'.'Title'.'</h3>';
     echo '<input type="text" style="width:300px" id="stc-widget-title" name="stc-widget-title" value="'.attribute_escape($options['title']).'" />'.'<br />';
   echo '</p>';
-  echo '<p>'._e('Display');
+  echo '<p>'.'<h3>'.'Display'.'</h3>';
     $displayalways = $options['display'][null] ? 'checked="checked"' : '';  
-    echo '<input type="checkbox" class="checkbox" id="stc-widget-display" name="stc-widget-display" '.$displayalways.' />'._e( 'Show always (ignore conditions)' ).'<br />';  
+    echo '<input type="checkbox" class="checkbox" id="stc-widget-display" name="stc-widget-display" '.$displayalways.' />'.'Show always (ignore conditions)'.'<br />';  
     foreach( $displayconditions as $key=>$displaycondition ) {
       $checked = $options['display'][ $key ] ? 'checked="checked"' : '';
-      echo '<input type="checkbox" class="checkbox" id="stc-widget-display-'.$key.'" name="stc-widget-display-'.$key.'" '.$checked.' />'._e( $displaycondition ).'<br />';    
+      echo '<input type="checkbox" class="checkbox" id="stc-widget-display-'.$key.'" name="stc-widget-display-'.$key.'" '.$checked.' />'.$displaycondition.'<br />';    
     }
   echo '</p>';  
-  echo '<p>'._e('Links');
+  echo '<p>'.'<h3>'.'Links'.'</h3>';
     $restrictlinks_tag = $options['restrictlinks']['tag'] ? 'checked="checked"' : ''; 
     $restrictlinks_cat = $options['restrictlinks']['cat'] ? 'checked="checked"' : ''; 
     $restrictlinks_cat_onlysubcats = $options['restrictlinks']['cat-onlysubcats'] ? 'checked="checked"' : '';
-    echo '<input type="checkbox" class="checkbox" id="stc-widget-restrictlinks-tag" name="stc-widget-restrictlinks-tag" '.$restrictlinks_tag.' />'._e('Restricted to current tag').'<br />';    
-    echo '<input type="checkbox" class="checkbox" id="stc-widget-restrictlinks-cat" name="stc-widget-restrictlinks-cat" '.$restrictlinks_cat.' />'._e('Restricted to current category').' (Subcategories not included!)'.'<br />';    
-    echo '&nbsp<input type="checkbox" class="checkbox" id="stc-widget-restrictlinks-cat-onlysubcats" name="stc-widget-restrictlinks-cat-onlysubcats" '.$restrictlinks_cat_onlysubcats.' />'._e('Restrict only to categories without subcategories').'<br />';
+    echo '<input type="checkbox" class="checkbox" id="stc-widget-restrictlinks-tag" name="stc-widget-restrictlinks-tag" '.$restrictlinks_tag.' />'.'Restricted to current tag'.'<br />';    
+    echo '<input type="checkbox" class="checkbox" id="stc-widget-restrictlinks-cat" name="stc-widget-restrictlinks-cat" '.$restrictlinks_cat.' />'.'Restricted to current category'.' (Subcategories not included!)'.'<br />';    
+    echo '&nbsp&nbsp&nbsp<input type="checkbox" class="checkbox" id="stc-widget-restrictlinks-cat-onlysubcats" name="stc-widget-restrictlinks-cat-onlysubcats" '.$restrictlinks_cat_onlysubcats.' />'.'Restrict only to categories without subcategories'.'<br />';
   echo '</p>';  
-  echo '<p>'._e('Style');
+  echo '<p>'.'<h3>'.'Style'.'</h3>';
+    echo '<table border="0">';
     foreach( $argkeys as $argkey=>$values ) {
-      echo _e($argkey).' ';
+      echo '<tr>';
+      echo '<td>';
+      if( array_key_exists($argkey,$argdescrs) )
+        echo $argdescrs[$argkey];
+      else
+        echo $argkey.' ';
+      echo '</td>';        
+      echo '<td>';
       if( is_int($values) || is_string($values) )
         echo '<input type="text" style="width:150px" id="stc-widget-args-'.$argkey.'" name="stc-widget-args-'.$argkey.'" value="'.$options['args'][$argkey].'" />';
       if( is_array($values) ) {
@@ -289,21 +321,53 @@ function stc_widget_control() {
         }
         echo '</select>';
       }
-      echo '<br />';
+      echo '</td>';
+      echo '</tr>';
     }
+    echo '</table>';
   echo '</p>';  
-  echo '<p>'._e('Exclude');
+  echo '<p>'.'<h3>'.'Exclude'.'</h3>';
     $excludetags = implode( ', ', $options['excludetags'] );
-    echo _e('Exclude Tags').' '.'<input type="text" class="text" id="stc-widget-excludetags" name="stc-widget-excludetags" value="'.$excludetags.'"/>'.'<br />';
+    echo 'Exclude Tags'.' '.'<input type="text" class="text" id="stc-widget-excludetags" name="stc-widget-excludetags" value="'.$excludetags.'"/>'.'<br />';
   echo '</p>';  
-  echo '<p>'._e('Performance');
+  echo '<p>'.'<h3>'.'Performance'.'</h3>';
     $activateperformancehacks = $options['activateperformancehacks'] ? 'checked="checked"' : '';
-    echo '<input type="checkbox" class="checkbox" id="stc-widget-activateperformancehacks" name="stc-widget-activateperformancehacks" '.$activateperformancehacks.' />'._e('Activate Performance Hacks').'<br />';
+    echo '<input type="checkbox" class="checkbox" id="stc-widget-activateperformancehacks" name="stc-widget-activateperformancehacks" '.$activateperformancehacks.' />'.'Activate Performance Hacks'.'<br />';
   echo '</p>';  
   echo '<input type="hidden" name="stc-widget-submit" id="stc-widget-submit" value="1" />';
   
   // completed control
   return;
+}
+
+//-----------------------------------------------------------------------------
+
+function stc_admin() {
+
+  // page output
+  echo '<div class="wrap">';
+    echo '<h2>SensitiveTagCloud Configuration</h2>';
+    echo '<div class="controlform">';
+      echo '<form method="post">';
+        stc_admin_output();
+        echo '<input type="submit">';
+      echo '</form>';
+    echo '</div>';
+  echo '</div>';
+  echo '<div class="wrap">';
+    echo '<h2>SensitiveTagCloud Instructions</h2>';
+    echo 'If your Theme does not support widgets, add the following code to your template file where you like to output the SensitiveTagCloud:<br>';
+    echo '<br>';
+    highlight_string(
+      '<?php '."\n".
+      '  if( function_exists("stc_widget") )'."\n".
+      '    stc_widget();'."\n".
+      '?>' );
+  echo '</div>';
+}
+
+function stc_admin_add() {
+  add_submenu_page( 'themes.php', 'SensitiveTagCloud', 'SensitiveTagCloud', 10/*ADMIN_ONLY*/, 'sensitivetagcloud', 'stc_admin' ); 
 }
 
 //-----------------------------------------------------------------------------
@@ -453,7 +517,7 @@ function stc_activate() {
   
   // options, defaultvalues
   $options = array( 
-    'title'   => __('Tags'), 
+    'title'   => 'Tags', 
     'args'    => $defaultargs,
     'display' => array( // display only if function evaluates to true
       null       => false,
@@ -496,8 +560,8 @@ function stc_init() {
 
   // register widget
   $class['classname'] = 'stc_widget';
-  wp_register_sidebar_widget('sensitive_tag_cloud', __('Sensitive Tag Cloud'), 'stc_widget', $class);
-  wp_register_widget_control('sensitive_tag_cloud', __('Sensitive Tag Cloud'), 'stc_widget_control', 'width=300&height=800');
+  wp_register_sidebar_widget('sensitive_tag_cloud', 'Sensitive Tag Cloud', 'stc_widget', $class);
+  wp_register_widget_control('sensitive_tag_cloud', 'Sensitive Tag Cloud', 'stc_widget_control', 'width=300&height=100');
   
   // init globals
   global $stc_filter_query_onlyminimum_active; // performance hack
@@ -517,6 +581,7 @@ function stc_init() {
 add_action( 'activate_'.plugin_basename(__FILE__),   'stc_activate' );
 add_action( 'deactivate_'.plugin_basename(__FILE__), 'stc_deactivate' );
 add_action( 'init', 'stc_init');
+add_action( 'admin_menu', 'stc_admin_add' );
 
 // filters
 add_filter( 'query', 'stc_filter_query_onlyminimum', 9 ); // a filter for fields queried in post/get_posts() only would be better
