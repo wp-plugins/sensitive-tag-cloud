@@ -4,6 +4,7 @@ Donate link: http://www.rene-ade.de/stichwoerter/spenden
 Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets, links, tag, tagcloud, sensitive, condition, stc
 Stable tag: trunk
 Requires at least: 2.3
+Tested up to: 2.7
 
 This wordpress plugin provides a tagcloud that shows tags depending of the current context (e.g. Category, Author, Tag, Post) only. The style and sizes are configurable. The tag-links of the cloud can be restricted to the current category or current selected tag.
 
@@ -29,9 +30,9 @@ German ScreenShots: sensitive-tag-cloud_install_de.jpg
 IF YOUR THEME DOES NOT SUPPORT SIDEBAR WIDGETS:
 - Use the page "SensitiveTagCloud" under the "Presentation"/"Themes"-menu of your admin panel to configure the SensitiveTagCloud 
 - Add the following code to your template file where you like to output the SensitiveTagCloud:
-  `
+  ' 
   <?php 
     if( function_exists("stc_widget") )
       stc_widget(); 
   ?> 
-  `
+  '
