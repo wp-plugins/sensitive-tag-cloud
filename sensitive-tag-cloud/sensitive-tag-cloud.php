@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 0.9.1
+Version: 1.0
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a highly configurable tagcloud that shows tags depending of the current context.
 Author: Ren&eacute; Ade
@@ -65,17 +65,11 @@ function stc_widget_display_allowed( $options=null ) {
 //-----------------------------------------------------------------------------
 
 // get posts
-function stc_get_posts( $options=null ) {
+function stc_get_posts( $queryvars ) {
 
   // options
-  if( !$options )
-    $options = get_option( 'stc_widget' ); // get options
-  
-  // query vars
-  global $wp_the_query; // current query
-  $queryvars = $wp_the_query->query_vars; // current query vars
-  $queryvars['nopaging'] = true; // get all posts
-  
+  $options = get_option( 'stc_widget' ); // get options
+
   // get posts
   global $stc_filter_query_onlyminimum_active; // query performance optimization
   $query =& new WP_Query(); // a new query object
@@ -126,13 +120,41 @@ function stc_widget( $args=null ) {
   // options
   $options = get_option( 'stc_widget' ); // get options
   
-  // get current posts
-  $posts = stc_get_posts( $options );
+  // query vars
+  $queryvars = null;
+  $searchtags = null;
+  if( $options['relatedposttags'] && (is_single()||is_page()) ) {
+    global $post;
+    $posttags = wp_get_post_tags( $post->ID );
+    $posttags_slugs = array();
+    foreach( $posttags as $posttag ) {
+      $posttags_slugs[] = $posttag->slug;
+    }
+    $queryvars = array( 'tag_slug__in'=>$posttags_slugs );
+    $searchtags = $queryvars['tag_slug__in'];         
+  }
+  else {
+    global $wp_the_query; // current query
+    $queryvars = $wp_the_query->query_vars; // current query vars
+    $searchtags = array();
+    if( !empty($queryvars['tag_slug__and']) )
+      $searchtags = array_merge( $searchtags, $queryvars['tag_slug__and'] );
+    if( strlen($queryvars['tag'])>0 )
+      $searchtags = array_merge( $searchtags, explode(' ',$queryvars['tag']) );
+  }
+  $queryvars['nopaging'] = true; // get all posts  
+  
+  // searchtags
+  $searchtags = array_unique( $searchtags );
+  
+  // get current posts to get tags
+  $posts = stc_get_posts( $queryvars );
 
   // get tags
   $tags = array();
   if( empty($posts) ) { // if there are no posts
-    $tags = get_tags( $args ); // get all tags 
+    if( is_home() || is_page() ) // only all tags if is a page
+      $tags = get_tags( $args ); // get all tags 
   }
   else { // there are posts
     // get tags of posts
@@ -150,6 +172,12 @@ function stc_widget( $args=null ) {
     }
   }
   
+  // exclude search tags
+  if( $options['excludesearchtags'] && !empty($searchtags) ) {
+    $options['excludetags'] = 
+      array_merge( $options['excludetags'], $searchtags );
+  }
+  
   // exclude tags
   if( !empty($options['excludetags']) ) {
     $tags_tmp = array();
@@ -164,9 +192,24 @@ function stc_widget( $args=null ) {
   if( empty($tags) ) // no tags
     return; // dont display cloud
     
+  // limits 
+  $limit = 0;
+  if( is_archive() ) {
+    $limit = $options['limit']['archive'];
+  }
+  else if( is_home() ) {
+    $limit = $options['limit']['home'];
+  }
+  else if( is_single() ) {
+    $limit = $options['limit']['post'];
+  }
+  else if( is_page() ) {
+    $limit = $options['limit']['page'];
+  }
   // limit tags
-  if( isset($options['args']['number']) && count($tags)>$options['args']['number'] ) {
-    $tags = array_chunk( $tags, $options['args']['number'] );    
+  $options['args']['number'] = $limit;  
+  if( $limit>0 && count($tags)>$limit ) {
+    $tags = array_chunk( $tags, $limit );    
     $tags = $tags[0];
   }
   
@@ -177,10 +220,6 @@ function stc_widget( $args=null ) {
     $stc_filter_tag_link_active; // get last state
   if( $options['restrictlinks']['cat'] || $options['restrictlinks']['tag'] ) // check if restrict links
     $stc_filter_tag_link_active = true; // restricted links
-  if( $stc_filter_tag_link_active ) {
-    foreach( $tags as $key=>$tag )
-      $tags[$key]->link = get_tag_link( $tag->term_id );
-  }
   $cloud = wp_generate_tag_cloud( $tags, $args_cloud ); // generate cloud
   $stc_filter_tag_link_active =  
     $stc_filter_tag_link_active_reset; // reset to last state
@@ -188,10 +227,14 @@ function stc_widget( $args=null ) {
     return; // cancle
   $cloud = apply_filters( 'wp_tag_cloud', $cloud, $args ); // apply cloud filter
    
+  // replace placeholder
+  $title = $options['title'];
+  $title = str_replace( '%tags%', implode(', ',$searchtags), $title );
+   
   // output
   if( $sidebaroutput ) {
     echo $before_widget;
-    echo $before_title . $options['title'] . $after_title;
+    echo $before_title . $title . $after_title;
     echo $cloud;
     echo $after_widget;
   }
@@ -221,7 +264,6 @@ function stc_admin_output() {
     'smallest'=>0, // number
     'largest'=>0, // number
     'unit'=>array('pt'), // options
-    'number'=>0, // number
     'format'=>array('flat','list'), // options
     'orderby'=>array('name','count'), // options
     'order'=>array('ASC','DESC') // options
@@ -230,7 +272,6 @@ function stc_admin_output() {
     'smallest'=>'Smalles size',
     'largest'=>'Largest size',
     'unit'=>'Size unit',
-    'number'=>'Max number of tags',
     'format'=>'Format',
     'orderby'=>'Order by',
     'order'=>'Order'
@@ -238,10 +279,10 @@ function stc_admin_output() {
   // define display conditions
   $displayconditions = array( 
     'is_home'     => 'Show on home page (all tags) (WP2.5)',
-    'is_page'     => 'Show on pages (all tags)',
-    'is_single'   => 'Show on post pages (tags of post)',
+    'is_page'     => 'Show on pages (all tags)', 
+    'is_single'   => 'Show on post pages (tags of post, related tags)',
     'is_search'   => 'Show on search page (tags of posts)',
-    'is_archive'  => 'Show in all archives (ignore archive type)',     
+    'is_archive'  => 'Show in all archives (tags of posts, ignore archive type)',     
     'is_date'     => 'Show in date archives (tags of posts)',
     'is_author'   => 'Show in author archives (tags of posts)',
     'is_tag'      => 'Show in tag archives (tags of posts)',
@@ -266,6 +307,8 @@ function stc_admin_output() {
       'cat-onlysubcats' => isset($_POST['stc-widget-restrictlinks-cat-onlysubcats'])
     );
     $newoptions['activateperformancehacks']    = isset( $_POST['stc-widget-activateperformancehacks'] ); // performance optimization      
+    $newoptions['excludesearchtags']           = isset( $_POST['stc-widget-excludesearchtags'] ); // exclude search tags
+    $newoptions['relatedposttags']             = isset( $_POST['stc-widget-relatedposttags'] ); // exclude search tags    
     // display args
     foreach( $argkeys as $argkey=>$type ) {
       if( is_string($type) ) // string field
@@ -277,6 +320,11 @@ function stc_admin_output() {
         $newoptions['args'][$argkey] = in_array($_POST['stc-widget-args-'.$argkey],$type) ? 
                                          $_POST['stc-widget-args-'.$argkey] : $type[0];
     }
+    // limit
+    $newoptions['limit']['home'] = (int)$_POST['stc-widget-limit-home'];
+    $newoptions['limit']['post'] = (int)$_POST['stc-widget-limit-post'];
+    $newoptions['limit']['page'] = (int)$_POST['stc-widget-limit-page'];
+    $newoptions['limit']['archive'] = (int)$_POST['stc-widget-limit-archive'];
   }
   
   // update options if needed
@@ -286,8 +334,9 @@ function stc_admin_output() {
   }
   
   // display form
-  echo '<p>'.'<h3>'.'Title'.' (Sidebar only)'.'</h3>';
+  echo '<p>'.'<h3>'.'Title (Sidebar only)'.'</h3>';
     echo '<input type="text" style="width:300px" id="stc-widget-title" name="stc-widget-title" value="'.attribute_escape($options['title']).'" />'.'<br />';
+    echo 'Available placeholders: %tags% will get replaced to a comma seperated list of the current query tags'.'<br>';
   echo '</p>';
   echo '<p>'.'<h3>'.'Display'.'</h3>';
     $displayalways = $options['display'][null] ? 'checked="checked"' : '';  
@@ -330,10 +379,28 @@ function stc_admin_output() {
     }
     echo '</table>';
   echo '</p>';  
+  echo '<p>'.'<h3>'.'Related'.'</h3>';  
+    $relatedposttags = $options['relatedposttags'] ? 'checked="checked"' : '';
+    echo '<input type="checkbox" class="checkbox" id="stc-widget-relatedposttags" name="stc-widget-relatedposttags" '.$relatedposttags.' />'.'Show also related tags if displaying a single post'.'<br />';  
+  echo '</p>';  
   echo '<p>'.'<h3>'.'Exclude'.'</h3>';
+    $excludesearchtags = $options['excludesearchtags'] ? 'checked="checked"' : '';
+    echo '<input type="checkbox" class="checkbox" id="stc-widget-excludesearchtags" name="stc-widget-excludesearchtags" '.$excludesearchtags.' />'.'Exclude current query tags'.'<br />';
     $excludetags = implode( ', ', $options['excludetags'] );
     echo 'Exclude Tags'.' '.'<input type="text" class="text" id="stc-widget-excludetags" name="stc-widget-excludetags" value="'.$excludetags.'"/>'.'<br />';
   echo '</p>';  
+  echo '<p>'.'<h3>'.'Limit'.'</h3>';  
+    echo 'Maximum number of tags to display'.'<br>';
+    $limit = $options['limit'];
+    foreach( $limit as $limitkey=>$limitvalue ) {
+      if( !($limitvalue>0) )
+        $limit[$limitkey] = '';
+    }
+    echo '<input type="text" class="text" id="stc-widget-limit-home" name="stc-widget-limit-home" value="'.$limit['home'].'"/>'.' on home page'.'<br />';
+    echo '<input type="text" class="text" id="stc-widget-limit-post" name="stc-widget-limit-post" value="'.$limit['post'].'"/>'.' on post pages'.'<br />';
+    echo '<input type="text" class="text" id="stc-widget-limit-page" name="stc-widget-limit-page" value="'.$limit['page'].'"/>'.' on static pages'.'<br />';
+    echo '<input type="text" class="text" id="stc-widget-limit-archive" name="stc-widget-limit-archive" value="'.$limit['archive'].'"/>'.' on archives'.'<br />';
+  echo '</p>';    
   echo '<p>'.'<h3>'.'Performance'.'</h3>';
     $activateperformancehacks = $options['activateperformancehacks'] ? 'checked="checked"' : '';
     echo '<input type="checkbox" class="checkbox" id="stc-widget-activateperformancehacks" name="stc-widget-activateperformancehacks" '.$activateperformancehacks.' />'.'Activate Performance Hacks'.'<br />';
@@ -354,7 +421,7 @@ function stc_admin() {
     echo '<div class="controlform">';
       echo '<form method="post">';
         stc_admin_output();
-        echo '<input type="submit" value="Save settings">';
+        echo '<input type="submit" value="Save">';
       echo '</form>';
     echo '</div>';
   echo '</div>';
@@ -367,7 +434,24 @@ function stc_admin() {
       '  if( function_exists("stc_widget") )'."\n".
       '    stc_widget();'."\n".
       '?>' );
+    echo '<br>';      
   echo '</div>';
+  echo '<div class="wrap">';
+	echo '<h2>SensitiveTagCloud About</h2>';
+    echo 'Official Plugin Website: '
+         .'<a href="http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html" target="_blank">'
+         .'http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html'
+         .'</a> '
+         .'(Informations, Updates, ...)'
+         .'<br>';      
+    echo 'Donations to the Author: '
+         .'<a href="http://www.rene-ade.de/stichwoerter/spenden" target="_blank">'
+         .'http://www.rene-ade.de/stichwoerter/spenden'
+         .'</a> '
+         .'(Amazon-Wishlist, Paypal, ...)'
+         .'<br>';
+  echo '</div>';
+  echo '<br>';
 }
 
 function stc_admin_add() {
@@ -394,32 +478,57 @@ function stc_filter_query_onlyminimum( $query ) {
 //-----------------------------------------------------------------------------
 
 // get tag link
-function stc_get_tag_link( $tag_id, $options=null ) {
+function stc_get_tag_link( $slugs_and ) {
 	global $wp_rewrite;
   
   // permastruct
 	$taglink = $wp_rewrite->get_tag_permastruct();
   
-  // get current slugs
-  $slugs = stc_get_tag_link_slugs( $options ); // get all restriction slugs
-      
-  // get tag slug by id
-  $tag_term = &get_term( $tag_id, 'post_tag' );
-  if( is_wp_error($tag_term) )  
-    return null;
-    
-  // merge slugs
-  $link_slugs = array( $tag_term->slug ); // the current tag slug
-  $link_slugs = array_merge( $link_slugs, $slugs['slugs_and'] );
-  // unique
-  $link_slugs = array_unique( $link_slugs );
-  
   // slugs
-  $slugs = implode( '+', $link_slugs );
+  $slugs = implode( '+', $slugs_and );
+  
+  // build link
+	if ( empty($taglink) ) { // no permalink: use getvars
+		$file = get_option('home') . '/';
+		$taglink = $file . '?tag=' . $slugs;
+	} else { // permalink
+		$taglink = str_replace('%tag%', $slugs, $taglink);
+		$taglink = get_option('home') . user_trailingslashit($taglink, 'category');
+	}
+  
+  // apply filter and return link
+  return apply_filters('tag_link', $taglink, $tag_id);  
+}
 
-  // cat links
-  $catlink = false;
+// get current slugs
+function stc_filter_tag_link_get_slugs( $options=null ) {
+
+  // use cached values if possible
+  global $stc_filter_tag_link_get_slugs_cache;
+  if( is_array($stc_filter_tag_link_get_slugs_cache) )
+    return $stc_filter_tag_link_get_slugs_cache;
+  
+  // initialize
+  $stc_filter_tag_link_get_slugs_cache = array(
+    'slugs_and' => array() 
+  );
+  
+  // options
+  if( !$options )
+    $options = get_option( 'stc_widget' ); // get options
+      
+  // get last slugs
+  $stc_filter_tag_link_get_slugs_cache['slugs_and'] = 
+    get_query_var('tag_slug__and');
+    
+  // add current slugs
+  $tag_id = get_query_var('tag_id'); // tag
   $cat_id = get_query_var('cat'); // cat
+  if( $options['restrictlinks']['tag'] && !empty($tag_id) ) { // restrict to tag?
+    $tag_term = &get_term( $tag_id, 'post_tag' ); // get term
+    if( !is_wp_error($tag_term) )
+      $stc_filter_tag_link_get_slugs_cache['slugs_and'][] = $tag_term->slug; // slug
+  }    
   if( $options['restrictlinks']['cat'] && !empty($cat_id) ) { // restirct to cat?
     $cat_hasnochilds = null;
     if( $options['restrictlinks']['cat-onlysubcats'] ) { // check for subcategories if needed
@@ -430,61 +539,16 @@ function stc_get_tag_link( $tag_id, $options=null ) {
     if( !$options['restrictlinks']['cat-onlysubcats'] || $cat_hasnochilds ) { // check if has subcategories if restricted
       $cat_term = &get_term( $cat_id, 'category' ); // get term
       if( !is_wp_error($cat_term) )
-        $catlink = true;
+        $stc_filter_tag_link_get_slugs_cache['slugs_and'][] = $cat_term->slug; // slug
     }
-  }
-  
-  // build link
-	if ( empty($taglink) || $catlink ) { // no permalink: use getvars // cat slug as tag slug will not longer work (2.7)
-		$file = get_option('home') . '/';
-    if( $catlink )
-  		$taglink = $file . '?cat=' . $cat_id . '&tag=' . $tag_term->slug . '+' . $slugs; // wp bug #5433 
-    else
-  		$taglink = $file . '?tag=' . $slugs;
-	} else { // permalink
-		$taglink = str_replace('%tag%', $slugs, $taglink);
-		$taglink = get_option('home') . user_trailingslashit($taglink, 'category');
-	}
-
-  // apply filter and return link
-  return apply_filters('tag_link', $taglink, $tag_id);  
-}
-
-// get current slugs
-function stc_get_tag_link_slugs( $options=null ) {
-
-  // use cached values if possible
-  global $stc_get_tag_link_slugs_cache;
-  if( is_array($stc_get_tag_link_slugs_cache) )
-    return $stc_get_tag_link_slugs_cache;
-  
-  // initialize
-  $stc_get_tag_link_slugs_cache = array(
-    'slugs_and' => array() 
-  );
-  
-  // options
-  if( !$options )
-    $options = get_option( 'stc_widget' ); // get options
-      
-  // get last slugs
-  $stc_get_tag_link_slugs_cache['slugs_and'] = 
-    get_query_var('tag_slug__and');
-    
-  // add current slugs
-  $tag_id = get_query_var('tag_id'); // tag
-  if( $options['restrictlinks']['tag'] && !empty($tag_id) ) { // restrict to tag?
-    $tag_term = &get_term( $tag_id, 'post_tag' ); // get term
-    if( !is_wp_error($tag_term) )
-      $stc_get_tag_link_slugs_cache['slugs_and'][] = $tag_term->slug; // slug
   }
     
   // unique
-  $stc_get_tag_link_slugs_cache['slugs_and'] = array_unique(
-    $stc_get_tag_link_slugs_cache['slugs_and'] );
+  $stc_filter_tag_link_get_slugs_cache['slugs_and'] = array_unique(
+    $stc_filter_tag_link_get_slugs_cache['slugs_and'] );
     
   // return slugs
-  return $stc_get_tag_link_slugs_cache;
+  return $stc_filter_tag_link_get_slugs_cache;
 }
 
 // filter tag link
@@ -505,15 +569,27 @@ function stc_filter_tag_link( $taglink, $tag_id ) {
   if( !$restrictlinks )
     return $taglink;
     
+  // get current slugs
+  $slugs = stc_filter_tag_link_get_slugs( $options ); // get all restriction slugs
+      
+  // get tag slug by id
+  $tag_term = &get_term( $tag_id, 'post_tag' );
+  if( is_wp_error($tag_term) )
+    return $taglink;
+    
+  // merge slugs
+  $link_slugs = array( $tag_term->slug ); // the current tag slug
+  $link_slugs = array_merge( $link_slugs, $slugs['slugs_and'] );
+  // unique
+  $link_slugs = array_unique( $link_slugs );
+
   // get link
   $stc_filter_tag_link_active = false; // no endless loop through filters
-  $newtaglink = stc_get_tag_link( $tag_id, $options ); // get link by slugs
-  if( !$newtaglink ) 
-    return $taglink;
+  $taglink = stc_get_tag_link( $link_slugs ); // get link by slugs
   $stc_filter_tag_link_active = true; // reset
     
   // return tag link
-  return $newtaglink;
+  return $taglink;
 }
 
 //-----------------------------------------------------------------------------
@@ -523,7 +599,7 @@ function stc_activate() {
   
   // default args
   $defaultargs = array(
-    'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 'number' => 45,
+    'smallest' => 8, 'largest' => 22, 'unit' => 'pt', 
     'format' => 'flat', 'orderby' => 'name', 'order' => 'ASC'
   );
   
@@ -548,8 +624,15 @@ function stc_activate() {
       'cat' => false,
       'cat-onlysubcats' => false
     ),
+    'limit' => array( // max number of tags
+      'post' => 0,
+      'page' => 0,
+      'home' => 0,
+      'archive' => 0
+    ),
     'activateperformancehacks' => false, // activate performance hacks
-    'excludetags'              => array() // a list of tags to exclude from the tagcloud
+    'excludetags'              => array(), // a list of tags to exclude from the tagcloud
+    'excludesearchtags'        => false // exclude search tags
   );
   
   // register option
@@ -578,10 +661,10 @@ function stc_init() {
   // init globals
   global $stc_filter_query_onlyminimum_active; // performance hack
   global $stc_filter_tag_link_active;          // restrict links
-  global $stc_get_tag_link_slugs_cache; // current restriction slugs
+  global $stc_filter_tag_link_get_slugs_cache; // current restriction slugs
   $stc_filter_query_onlyminimum_active = false;
   $stc_filter_tag_link_active          = false;
-  $stc_get_tag_link_slugs_cache = null;
+  $stc_filter_tag_link_get_slugs_cache = null;
   
   // initialized
   return;
