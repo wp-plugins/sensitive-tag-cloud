@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 1.1
+Version: 1.2
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a highly configurable tagcloud that shows tags depending of the current context.
 Author: Ren&eacute; Ade
@@ -157,19 +157,32 @@ function stc_widget( $args=null ) {
       $tags = get_tags( $args ); // get all tags 
   }
   else { // there are posts
+    $posttags = array(); 
     // get tags of posts
-    foreach( $posts as $post ) {  // go through posts
-      $posttags = wp_get_post_tags( $post->ID, $args ); // get tags of the current post
-      foreach( $posttags as $posttag ) { // go through tags of the current post
-        if( !array_key_exists($posttag->name,$tags)  ) { // is tag missing in list
-          $tags[ $posttag->name ] = $posttag; // add tag
-          $tags[ $posttag->name ]->count = 1; // this is the first occurrence
-        }
-        else { // tag is already in list
-          $tags[ $posttag->name ]->count += 1; // increment occurrence counter
+    if( $options['activateperformancehacks'] ) {
+      $postids = array();
+      foreach( $posts as $post ) {  // go through posts    
+        $postids[] = $post->ID;
+      }      
+      $posttags = wp_get_object_terms( $postids, 'post_tag', $args );
+    }
+    else {
+      foreach( $posts as $post ) {  // go through posts
+        $currentposttags = wp_get_post_tags( $post->ID, $args ); // get tags of the current post
+        foreach( $currentposttags as $posttag ) {
+          $posttags[] = $posttag;
         }
       }
     }
+    foreach( $posttags as $posttag ) { // go through tags of the current post
+      if( !array_key_exists($posttag->name,$tags)  ) { // is tag missing in list
+        $tags[ $posttag->name ] = $posttag; // add tag
+        $tags[ $posttag->name ]->count = 1; // this is the first occurrence
+      }
+      else { // tag is already in list
+        $tags[ $posttag->name ]->count += 1; // increment occurrence counter
+      }
+    }    
   }
   
   // exclude search tags
@@ -657,7 +670,7 @@ function stc_activate() {
       'home' => 0,
       'archive' => 0
     ),
-    'activateperformancehacks' => false, // activate performance hacks
+    'activateperformancehacks' => true, // activate performance hacks
     'excludetags'              => array(), // a list of tags to exclude from the tagcloud
     'excludesearchtags'        => false // exclude search tags
   );
