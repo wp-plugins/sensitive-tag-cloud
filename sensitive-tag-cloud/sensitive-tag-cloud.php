@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 1.2
+Version: 1.3
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a highly configurable tagcloud that shows tags depending of the current context.
 Author: Ren&eacute; Ade
@@ -91,6 +91,18 @@ function stc_get_posts( $queryvars ) {
     
   // return posts
   return $posts;
+}
+
+//-----------------------------------------------------------------------------
+
+// usort function to sort by count
+function stc_sort( $tag_a, $tag_b ) {
+  if( $tag_a->count>$tag_b->count )
+    return +1;
+  else if( $tag_a->count<$tag_b->count )
+    return -1;
+  else
+    return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -222,6 +234,10 @@ function stc_widget( $args=null ) {
   // limit tags
   $options['args']['number'] = $limit;  
   if( $limit>0 && count($tags)>$limit ) {
+    // order by count
+    usort( $tags, 'stc_sort' );
+    $tags = array_reverse( $tags );
+    // limit 
     $tags = array_chunk( $tags, $limit );    
     $tags = $tags[0];
   }
@@ -233,7 +249,8 @@ function stc_widget( $args=null ) {
     $stc_filter_tag_link_active; // get last state
   if( $options['restrictlinks']['cat'] || $options['restrictlinks']['tag'] ) // check if restrict links
     $stc_filter_tag_link_active = true; // restricted links
-  if( $stc_filter_tag_link_active ) {
+  global $wp_version;
+  if( version_compare($wp_version,'2.7-A','>=') ) {
     foreach( $tags as $key=>$tag )
       $tags[$key]->link = get_tag_link( $tag->term_id );
   }
@@ -295,7 +312,7 @@ function stc_admin_output() {
   );
   // define display conditions
   $displayconditions = array( 
-    'is_home'     => 'Show on home page (all tags) (WP2.5)',
+    'is_home'     => 'Show on home page (all tags)',
     'is_page'     => 'Show on pages (all tags)', 
     'is_single'   => 'Show on post pages (tags of post, related tags)',
     'is_search'   => 'Show on search page (tags of posts)',
