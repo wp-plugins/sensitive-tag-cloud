@@ -4,7 +4,7 @@ Donate link: http://www.rene-ade.de/stichwoerter/spenden
 Tags: widget, sidebar, posts, tags, categories, category, navigation, widgets, links, tag, tagcloud, sensitive, condition, stc, drilldown, drill down, drill, down, related, limit, exclude
 Stable tag: trunk
 Requires at least: 2.3
-Tested up to: 2.7
+Tested up to: 2.99999
 
 This wordpress plugin provides a tagcloud that shows tags depending of the current context (e.g. Category, Author, Tag, Post) only. The tag-links of the cloud can be restricted to the current category or current selected tag, like a drill down navigation. The style, sizes and the conditions where the widget should be visible, are configurable. 
 
