@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 1.3.1
+Version: 1.4
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a highly configurable tagcloud that shows tags depending of the current context.
 Author: Ren&eacute; Ade
@@ -216,13 +216,30 @@ function stc_widget( $args=null ) {
   // check if there are tags to display
   if( empty($tags) ) // no tags
     return; // dont display cloud
+
+  // check min count
+  $min = 1;
+  if( is_home() ) {
+    $min = $options['min']['home'];
+  }
+  else if( is_page() ) {
+    $min = $options['min']['page'];
+  }    
+  else if( is_archive() ) {
+    $min = $options['min']['archive'];
+  }
+  if( $min>1 ) {
+  	$tags_tmp = array();
+    foreach( $tags as $tag=>$value ) {
+      if( $tags[$tag]->count >= $min )	
+        $tags_tmp[ $tag ] = $value; // readd   
+    }
+    $tags = $tags_tmp;
+  }
     
   // limits 
   $limit = 0;
-  if( is_archive() ) {
-    $limit = $options['limit']['archive'];
-  }
-  else if( is_home() ) {
+  if( is_home() ) {
     $limit = $options['limit']['home'];
   }
   else if( is_single() ) {
@@ -230,6 +247,9 @@ function stc_widget( $args=null ) {
   }
   else if( is_page() ) {
     $limit = $options['limit']['page'];
+  }
+  else if( is_archive() ) {
+    $limit = $options['limit']['archive'];
   }
   // limit tags
   $options['args']['number'] = $limit;  
@@ -354,6 +374,10 @@ function stc_admin_output() {
         $newoptions['args'][$argkey] = in_array($_POST['stc-widget-args-'.$argkey],$type) ? 
                                          $_POST['stc-widget-args-'.$argkey] : $type[0];
     }
+    // min
+    $newoptions['min']['home'] = (int)$_POST['stc-widget-min-home'];
+    $newoptions['min']['page'] = (int)$_POST['stc-widget-min-page'];
+    $newoptions['min']['archive'] = (int)$_POST['stc-widget-min-archive'];
     // limit
     $newoptions['limit']['home'] = (int)$_POST['stc-widget-limit-home'];
     $newoptions['limit']['post'] = (int)$_POST['stc-widget-limit-post'];
@@ -423,6 +447,16 @@ function stc_admin_output() {
     $excludetags = implode( ', ', $options['excludetags'] );
     echo 'Exclude Tags'.' '.'<input type="text" class="text" id="stc-widget-excludetags" name="stc-widget-excludetags" value="'.$excludetags.'"/>'.'<br />';
   echo '</p>';  
+  echo '<p>'.'<h3>'.'Minimum'.'</h3>';  
+    echo 'Minimum number of occurrences a tag has to have to be displayed'.'<br>';
+    $min = $options['min'];
+    foreach( $min as $minkey=>$minvalue ) {
+      if( !($minvalue>1) )
+        $min[$minkey] = '';
+    }
+    echo '<input type="text" class="text" id="stc-widget-min-home" name="stc-widget-min-home" value="'.$min['home'].'"/>'.' on home page (overall)'.'<br />';
+    echo '<input type="text" class="text" id="stc-widget-min-page" name="stc-widget-min-page" value="'.$min['page'].'"/>'.' on static pages (overall)'.'<br />';
+    echo '<input type="text" class="text" id="stc-widget-min-archive" name="stc-widget-min-archive" value="'.$min['archive'].'"/>'.' on archives (in current selection)'.'<br />';
   echo '<p>'.'<h3>'.'Limit'.'</h3>';  
     echo 'Maximum number of tags to display'.'<br>';
     $limit = $options['limit'];
@@ -680,6 +714,11 @@ function stc_activate() {
       'tag' => true,
       'cat' => false,
       'cat-onlysubcats' => false
+    ),
+    'min' => array( // min count
+      'page' => 1,
+      'home' => 1,
+      'archive' => 1
     ),
     'limit' => array( // max number of tags
       'post' => 0,
