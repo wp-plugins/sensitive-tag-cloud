@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 /*
 Plugin Name: Sensitive Tag Cloud
-Version: 1.4
+Version: 1.4.1
 Plugin URI: http://www.rene-ade.de/inhalte/wordpress-plugin-sensitivetagcloud.html
 Description: This wordpress plugin provides a highly configurable tagcloud that shows tags depending of the current context.
 Author: Ren&eacute; Ade
@@ -12,6 +12,14 @@ Min WP Version: 2.3
 //-----------------------------------------------------------------------------
 ?>
 <?php
+
+//-----------------------------------------------------------------------------
+
+if( !function_exists('stc_plugin_basename') ) {
+  function stc_plugin_basename() {
+    return plugin_basename(__FILE__);
+  }
+}
 
 //-----------------------------------------------------------------------------
 
@@ -672,7 +680,7 @@ function stc_filter_tag_link( $taglink, $tag_id ) {
 
 // add admin actions
 function stc_filter_plugin_action_links( $action_links, $plugin_file ) {
-  if( $plugin_file!=plugin_basename(__FILE__) ) // only for this plugin
+  if( $plugin_file!=stc_plugin_basename() ) // only for this plugin
     return $action_links;
 
   // add links
@@ -769,8 +777,8 @@ function stc_init() {
 //-----------------------------------------------------------------------------
 
 // actions
-add_action( 'activate_'.plugin_basename(__FILE__),   'stc_activate' );
-add_action( 'deactivate_'.plugin_basename(__FILE__), 'stc_deactivate' );
+add_action( 'activate_'.stc_plugin_basename(),   'stc_activate' );
+add_action( 'deactivate_'.stc_plugin_basename(), 'stc_deactivate' );
 add_action( 'init', 'stc_init');
 add_action( 'admin_menu', 'stc_admin_add' );
 
